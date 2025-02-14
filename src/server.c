@@ -10,7 +10,7 @@
 const int LISTEN_BACKLOG = 64;
 
 Server server_create(const int port) {
-  char *error = NULL;
+  bool error = false;
 
   const int port_string_size = (int)(ceil(log10(port)) + 1);
   char *port_string = (char *)malloc(sizeof(char) * port_string_size);
@@ -26,8 +26,9 @@ Server server_create(const int port) {
 
   const int addr_err = getaddrinfo(NULL, port_string, &hints, &results);
   if (addr_err || results == NULL) {
-    sprintf(error,
+    fprintf(stderr,
             "The specified port is not able to bind. Please try again\n");
+    error = true;
     goto cleanup;
   }
   // Attempt to bind to first available socket
@@ -50,19 +51,21 @@ Server server_create(const int port) {
   }
 
   if (socketfd == -1) {
-    sprintf(error,
+    fprintf(stderr,
             "Could not bind to port %d, please try another, or verify that "
             "this port isn't already running.\n",
             port);
+    error = true;
     goto cleanup;
   }
   {
     const int listen_error = listen(socketfd, LISTEN_BACKLOG);
     if (listen_error) {
-      sprintf(error,
+      fprintf(stderr,
               "Could not bind to port %d, please try another, or verify that "
               "this port isn't already running.\n",
               port);
+      error = true;
       goto cleanup;
     }
   }
@@ -71,7 +74,7 @@ cleanup:
   free(port_string);
   freeaddrinfo(results);
   if (error) {
-    exit_error(error);
+    exit(EXIT_FAILURE);
   }
 
   Server return_server = {

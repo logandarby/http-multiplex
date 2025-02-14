@@ -16,9 +16,9 @@ include(GoogleTest)
 
 # Add Tests
 
-add_executable(dz_array_test dz_test_test.cpp)
+add_executable(dz_arena_test dz_arena_test.cpp)
 # gtest_discover_tests(tests)
-target_include_directories(dz_array_test PRIVATE "../src")
-target_link_libraries(dz_array_test PRIVATE GTest::GTest DZHttp_Lib)
+target_include_directories(dz_arena_test PRIVATE "../src")
+target_link_libraries(dz_arena_test PRIVATE GTest::GTest DZHttp_Lib)
 
-add_test(dz_array_test_gtest dz_array_test)
+add_test(dz_arena_test_gtest dz_arena_test)

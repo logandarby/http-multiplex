@@ -1,5 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,6 +12,7 @@
 #include "core.h"
 #include "pool.h"
 #include "server.h"
+#include "arena.h"
 
 const char *BAD_REQ_ERR = "HTTP/1.1 400 Bad Request\r\n\r\n";
 const char *NOT_FOUND_ERR = "HTTP/1.1 404 Not Found\r\n\r\n";
@@ -25,21 +27,45 @@ static const char *HTTP_SPACE_DELIMITER = " ";
 static const char *HTTP_LINE_DELIMITER = "\n";
 
 #define BUFFER_SIZE 8192
-static char buffer[BUFFER_SIZE + 1];
+static DZArena arena;
+
+volatile sig_atomic_t fatal_error_in_progress = 0;
+volatile sig_atomic_t is_running = 1;
+void interrupt_signal_handler(const int sig) {
+  if (fatal_error_in_progress) {
+    raise(sig);
+  }
+  printf("\nINT SIGNAL CAUGHT\n");
+  fatal_error_in_progress = 1;
+  // Cleanup
+  is_running = 0;
+  /*signal(sig, SIG_DFL);*/
+  /*raise(sig);*/
+}
 
 int main(const int argc, const char **argv) {
+#ifdef _DEBUG
+  printf("Debug signal handling mode enabled\n");
+  signal(SIGINT, interrupt_signal_handler);
+#endif
   const Arguments args = args_parse(argc, argv);
   if (args.error) {
     args_print_usage();
     exit(EXIT_FAILURE);
   }
+  DZArena arena = dz_arena_init(0);
+  if (arena.error) {
+    exit_error("Arena could not malloc. Error: %d. Error number: %d\n", arena.error, errno);
+  }
+  static char* buffer = NULL;
   Server server = server_create(args.port);
   printf("Accepting connections on port %d\n", server.port);
 
   FdPool fdpool;
   fdpool_init(&fdpool, server.fd);
 
-  while (1) {
+  while (is_running) {
+    buffer = (char*)dz_arena_alloc(&arena, BUFFER_SIZE + 1); 
     int nready = fdpool_select_ready(&fdpool);
     if (nready < 0) {
       fprintf(stderr, "ERROR With select. Error Number: %d\n", errno);
@@ -70,16 +96,23 @@ int main(const int argc, const char **argv) {
         // Recieve data from a file descriptor (a client descriptor)
         recv(i, buffer, BUFFER_SIZE, 0);
         buffer[BUFFER_SIZE] = '\0';  // Safety!
-        printf("Received message %s\n", buffer);
+        /*printf("Received message %s\n", buffer);*/
         const char *method = strtok(buffer, HTTP_SPACE_DELIMITER);
+        if (!method) {
+          fprintf(stderr, "Could not get method\n");
+          goto close_client_connection;
+        }
         printf("Method %s\n", method);
 
         if (str_eq(method, "GET", BUFFER_SIZE)) {
-          char *file_name = strtok(NULL, HTTP_SPACE_DELIMITER);
-          file_name -= 1;
-          file_name[0] = '.';
-          printf("Getting file %s\n", file_name);
-          const int fd_to_read = open(file_name, O_RDONLY);
+          static const size_t RESOURCE_PATH_LEN = strlen(RESOURCES_PATH);
+          const char *file_name = strtok(NULL, HTTP_SPACE_DELIMITER);
+          const size_t file_name_len = strlen(file_name);
+          char *full_file_name = (char*)dz_arena_alloc(&arena, file_name_len + RESOURCE_PATH_LEN + 1);
+          strncpy(full_file_name, RESOURCES_PATH, RESOURCE_PATH_LEN - 1);
+          strcat(full_file_name, file_name);
+          printf("Getting file %s\n", full_file_name);
+          const int fd_to_read = open(full_file_name, O_RDONLY);
           if (fd_to_read == -1) {
             write(i, NOT_FOUND_ERR, strlen(NOT_FOUND_ERR));
             fprintf(stderr, "Could not find file. Error number %d\n",
@@ -120,7 +153,9 @@ int main(const int argc, const char **argv) {
         close(client_fd);
       }
     }
+    dz_arena_clear(&arena);
   }
-
+  printf("Exiting...\n");
+  dz_arena_free(&arena);
   return EXIT_SUCCESS;
 }

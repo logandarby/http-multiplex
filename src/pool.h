@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdlib.h>
 #include <sys/select.h>
 
 #define POOL_FD_SETSIZE FD_SETSIZE
@@ -12,7 +13,8 @@ enum FdDataType {
   FD_DATA_SERVER,
   FD_DATA_COUNT
 };
-// For a file descriptor to be read, holds the client fd to send the file to
+// For a file descriptor to be read, holds the client fd to send the
+// file to
 typedef struct {
   int client_fd_to_send;
 } FdDataFile;
@@ -51,4 +53,3 @@ enum FdDataType fdpool_get_fd_type(FdPool *self, int fd);
 
 void fdpool_set_file_data(FdPool *self, int fd_to_read, FdDataFile);
 FdDataFile fdpool_get_file_data(FdPool *self, int fd_to_read);
-
