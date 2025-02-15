@@ -15,4 +15,3 @@ extern bool str_eq(const char *s1, const char *s2, size_t n);
 extern void dz_assert_msg(bool condition, const char *msg, ...);
 
 extern void dz_assert(bool condition);
-

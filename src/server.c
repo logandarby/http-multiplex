@@ -24,10 +24,12 @@ Server server_create(const int port) {
   hints.ai_family = AF_INET;
   hints.ai_socktype = SOCK_STREAM;
 
-  const int addr_err = getaddrinfo(NULL, port_string, &hints, &results);
+  const int addr_err =
+      getaddrinfo(NULL, port_string, &hints, &results);
   if (addr_err || results == NULL) {
-    fprintf(stderr,
-            "The specified port is not able to bind. Please try again\n");
+    fprintf(
+        stderr,
+        "The specified port is not able to bind. Please try again\n");
     error = true;
     goto cleanup;
   }
@@ -35,13 +37,14 @@ Server server_create(const int port) {
   for (struct addrinfo *current = results; current != NULL;
        current = current->ai_next) {
     const int attempt_socket_fd =
-        socket(current->ai_family, current->ai_socktype, current->ai_protocol);
+        socket(current->ai_family, current->ai_socktype,
+               current->ai_protocol);
     if (attempt_socket_fd < 0) {
       continue;
     }
     {
-      const int bind_error =
-          bind(attempt_socket_fd, current->ai_addr, current->ai_addrlen);
+      const int bind_error = bind(attempt_socket_fd, current->ai_addr,
+                                  current->ai_addrlen);
       if (bind_error) {
         continue;
       }
@@ -52,7 +55,8 @@ Server server_create(const int port) {
 
   if (socketfd == -1) {
     fprintf(stderr,
-            "Could not bind to port %d, please try another, or verify that "
+            "Could not bind to port %d, please try another, or "
+            "verify that "
             "this port isn't already running.\n",
             port);
     error = true;
@@ -62,7 +66,8 @@ Server server_create(const int port) {
     const int listen_error = listen(socketfd, LISTEN_BACKLOG);
     if (listen_error) {
       fprintf(stderr,
-              "Could not bind to port %d, please try another, or verify that "
+              "Could not bind to port %d, please try another, or "
+              "verify that "
               "this port isn't already running.\n",
               port);
       error = true;

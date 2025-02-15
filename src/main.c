@@ -1,9 +1,9 @@
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "arguments.h"
-#include "start.h"
 #include "interrupt.h"
-#include <stdio.h>
+#include "start.h"
 
 static const unsigned int DEFAULT_TIMEOUT_MS = 10000;
 
@@ -17,5 +17,6 @@ int main(const int argc, const char **argv) {
   printf("Debug signal handling mode enabled\n");
   signal(SIGINT, interrupt_signal_handler);
 #endif
-  return start(args.port, RESOURCES_PATH, &is_running, DEFAULT_TIMEOUT_MS);
+  return start(args.port, RESOURCES_PATH, &is_running,
+               DEFAULT_TIMEOUT_MS);
 }

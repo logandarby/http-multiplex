@@ -2,7 +2,7 @@
 
 #include <stdlib.h>
 
-typedef enum DzArenaError { 
+typedef enum DzArenaError {
   DzArenaError_NONE,
   DzArenaError_MALLOC,  // Could not MALLOC
   DzArenaError_ALLOC,   // Alloc goes over max_size

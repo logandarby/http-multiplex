@@ -1,9 +1,9 @@
 #include "core.h"
 
+#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 
 void exit_error(const char *msg, ...) {
   va_list args;
@@ -28,6 +28,4 @@ void dz_assert_msg(const bool condition, const char *msg, ...) {
   assert(condition);
 }
 
-void dz_assert(const bool condition) {
-  assert(condition);
-}
+void dz_assert(const bool condition) { assert(condition); }

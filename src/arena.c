@@ -2,12 +2,14 @@
 
 #include <stdbool.h>
 #include <string.h>
+
 #include "core.h"
 
 const size_t DZ_ARENA_DEFAULT_MAX_SIZE = 1000000;  // 1MB
 
 DZArena dz_arena_init(const size_t max_size) {
-  size_t size_to_allocate = (max_size == 0) ? DZ_ARENA_DEFAULT_MAX_SIZE : max_size;
+  size_t size_to_allocate =
+      (max_size == 0) ? DZ_ARENA_DEFAULT_MAX_SIZE : max_size;
   char *data = (char *)malloc(size_to_allocate * sizeof(char));
   DZArena arena = {
       .max_size = size_to_allocate,
