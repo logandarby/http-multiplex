@@ -15,7 +15,7 @@ extern "C" {
 
 volatile sig_atomic_t is_running = 1;
 
-static const short PORT = 8085;
+static const short PORT = 8083;
 #define N_CLIENTS 100
 #define N_REQS_PER_CLIENT 1000
 

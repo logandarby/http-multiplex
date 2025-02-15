@@ -17,6 +17,7 @@ DZArena dz_arena_init(const size_t max_size) {
       .data = data,
       .error = DzArenaError_NONE,
   };
+  DZ_ASSERT(data, "Could not malloc data for the arena");
   if (!data) {
     arena.error = DzArenaError_MALLOC;
     arena.max_size = 0;
@@ -25,6 +26,9 @@ DZArena dz_arena_init(const size_t max_size) {
 }
 
 void dz_arena_free(DZArena *arena) {
+  DZ_ASSERT(arena);
+  DZ_ASSERT(!arena->error);
+  DZ_ASSERT(arena->data);
   if (!arena || !arena->data || arena->error) {
     return;
   }
@@ -32,6 +36,8 @@ void dz_arena_free(DZArena *arena) {
 }
 
 void dz_arena_clear(DZArena *arena) {
+  DZ_ASSERT(arena);
+  DZ_ASSERT(!arena->error);
   if (!arena || arena->error) {
     return;
   }
@@ -39,6 +45,8 @@ void dz_arena_clear(DZArena *arena) {
 }
 
 void *dz_arena_alloc(DZArena *arena, const size_t n_bytes) {
+  DZ_ASSERT(arena);
+  DZ_ASSERT(!arena->error);
   if (!arena || arena->error) {
     return NULL;
   }
