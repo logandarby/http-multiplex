@@ -1,10 +1,12 @@
+#include "pool.h"
+
 #include <assert.h>
+#include <bits/types/struct_timeval.h>
 #include <fcntl.h>
 #include <string.h>
 #include <sys/select.h>
 
 #include "core.h"
-#include "pool.h"
 
 void fdpool_init(FdPool *self, const int socket_fd) {
   assert(socket_fd < POOL_FD_SETSIZE);
@@ -13,7 +15,7 @@ void fdpool_init(FdPool *self, const int socket_fd) {
   self->maxfd = socket_fd;
   FD_ZERO(&self->read_set);
   FD_ZERO(&self->select_ready_set);
-  fdpool_add_fd(self, socket_fd, FD_DATA_SERVER);
+  fdpool_add_fd(self, socket_fd, FdDataType_SERVER);
 }
 
 void fdpool_add_fd(FdPool *self, const int fd, enum FdDataType type) {
@@ -30,11 +32,12 @@ void fdpool_remove_fd(FdPool *self, const int fd) {
   FD_CLR(fd, &self->read_set);
 }
 
-int fdpool_select_ready(FdPool *self) {
+int fdpool_select_ready(FdPool *self, unsigned int timeout) {
   memcpy(&self->select_ready_set, &self->read_set,
          sizeof(self->read_set));
+  struct timeval time = {.tv_usec = timeout};
   self->nready = select(self->maxfd + 1, &self->select_ready_set,
-                        NULL, NULL, NULL);
+                        NULL, NULL, &time);
   return self->nready;
 }
 
@@ -50,13 +53,13 @@ enum FdDataType fdpool_get_fd_type(FdPool *self, int fd) {
   return self->fd_data[fd].data_type;
 }
 
-void fdpool_set_file_data(FdPool *self, int fd_to_read, FdDataFile file_data) {
-  assert(self->fd_data[fd_to_read].data_type == FD_DATA_FILE);
+void fdpool_set_file_data(FdPool *self, int fd_to_read,
+                          FdDataFile file_data) {
+  assert(self->fd_data[fd_to_read].data_type == FdDataType_FILE);
   self->fd_data[fd_to_read].fdDataFile = file_data;
 }
 
 FdDataFile fdpool_get_file_data(FdPool *self, int fd_to_read) {
-  assert(self->fd_data[fd_to_read].data_type == FD_DATA_FILE);
+  assert(self->fd_data[fd_to_read].data_type == FdDataType_FILE);
   return self->fd_data[fd_to_read].fdDataFile;
 }
-

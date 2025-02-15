@@ -16,8 +16,7 @@ set_property(TARGET "${CMAKE_PROJECT_NAME}" PROPERTY C_STANDARD 99)
 
 # Configure resource files macro
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-    target_compile_definitions("${CMAKE_PROJECT_NAME}" PUBLIC
-        RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/res/"
+  add_compile_definitions(RESOURCES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/res/"
         _DEBUG
     )
 endif()

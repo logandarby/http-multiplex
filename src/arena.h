@@ -2,13 +2,13 @@
 
 #include <stdlib.h>
 
-typedef enum DZ_ARENA_ERROR {
-  DZ_ARENA_ERROR_NONE,
-  DZ_ARENA_ERROR_MALLOC,  // Could not MALLOC
-  DZ_ARENA_ERROR_ALLOC,   // Alloc goes over max_size
+typedef enum DzArenaError { 
+  DzArenaError_NONE,
+  DzArenaError_MALLOC,  // Could not MALLOC
+  DzArenaError_ALLOC,   // Alloc goes over max_size
 
-  DZ_ARENA_ERROR_COUNT,
-} DZ_ARENA_ERROR;
+  DzArenaError_COUNT,
+} DzArenaError;
 
 // Area Allocator
 // Allocates objects into the area. Cannot free individual objects,
@@ -18,7 +18,7 @@ typedef struct DZArena {
   size_t max_size;
   size_t first_empty_byte;
   char *data;
-  DZ_ARENA_ERROR error;
+  DzArenaError error;
 } DZArena;
 
 extern const size_t DZ_ARENA_DEFAULT_MAX_SIZE;  // 1 MB

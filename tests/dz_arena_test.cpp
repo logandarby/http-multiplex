@@ -7,7 +7,7 @@ extern "C" {
 TEST(Arena, Initialization) {
   DZArena a = dz_arena_init(100);
   ASSERT_TRUE(a.data);
-  ASSERT_EQ(a.error, DZ_ARENA_ERROR_NONE);
+  ASSERT_EQ(a.error, DzArenaError_NONE);
   ASSERT_EQ(a.first_empty_byte, 0);
   ASSERT_EQ(a.max_size, 100);
   dz_arena_free(&a);
@@ -16,7 +16,7 @@ TEST(Arena, Initialization) {
 TEST(Arena, Default_Init) {
   DZArena a = dz_arena_init(0);
   ASSERT_EQ(a.max_size, DZ_ARENA_DEFAULT_MAX_SIZE);
-  ASSERT_EQ(a.error, DZ_ARENA_ERROR_NONE);
+  ASSERT_EQ(a.error, DzArenaError_NONE);
   dz_arena_free(&a);
 }
 
@@ -28,7 +28,7 @@ TEST(Arena, Allocation) {
     string[i] = 'a';
     string2[i] = 'b';
   }
-  ASSERT_EQ(a.error, DZ_ARENA_ERROR_NONE);
+  ASSERT_EQ(a.error, DzArenaError_NONE);
   ASSERT_NE(string, string2);
   ASSERT_EQ(a.max_size, 100);
   ASSERT_EQ(a.first_empty_byte, 100);
@@ -57,7 +57,7 @@ TEST(Arena, Clear) {
   }
   dz_arena_clear(&a);
   ASSERT_EQ(a.first_empty_byte, 0);
-  ASSERT_EQ(a.error, DZ_ARENA_ERROR_NONE);
+  ASSERT_EQ(a.error, DzArenaError_NONE);
   dz_arena_free(&a);
 }
 

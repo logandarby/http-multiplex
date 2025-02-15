@@ -1,6 +1,8 @@
 #include "arena.h"
 
+#include <stdbool.h>
 #include <string.h>
+#include "core.h"
 
 const size_t DZ_ARENA_DEFAULT_MAX_SIZE = 1000000;  // 1MB
 
@@ -11,10 +13,10 @@ DZArena dz_arena_init(const size_t max_size) {
       .max_size = size_to_allocate,
       .first_empty_byte = 0,
       .data = data,
-      .error = DZ_ARENA_ERROR_NONE,
+      .error = DzArenaError_NONE,
   };
   if (!data) {
-    arena.error = DZ_ARENA_ERROR_MALLOC;
+    arena.error = DzArenaError_MALLOC;
     arena.max_size = 0;
   }
   return arena;
@@ -41,7 +43,8 @@ void *dz_arena_alloc(DZArena *arena, const size_t n_bytes) {
   void *address = arena->data + arena->first_empty_byte;
   arena->first_empty_byte += n_bytes;
   if (arena->first_empty_byte > arena->max_size) {
-    arena->error = DZ_ARENA_ERROR_ALLOC;
+    dz_assert_msg(false, "Alloc too big for arena\n");
+    arena->error = DzArenaError_ALLOC;
     return NULL;
   }
   memset(address, 0, n_bytes);
