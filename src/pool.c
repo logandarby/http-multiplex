@@ -1,6 +1,5 @@
 #include "pool.h"
 
-#include <assert.h>
 #include <bits/types/struct_timeval.h>
 #include <fcntl.h>
 #include <string.h>
@@ -9,7 +8,7 @@
 #include "core.h"
 
 void fdpool_init(FdPool *self, const int socket_fd) {
-  assert(socket_fd < POOL_FD_SETSIZE);
+  DZ_ASSERT(socket_fd < POOL_FD_SETSIZE, "Socket FD too big");
   memset(self, 0, sizeof(FdPool));
   self->socket_fd = socket_fd;
   self->maxfd = socket_fd;
@@ -19,7 +18,7 @@ void fdpool_init(FdPool *self, const int socket_fd) {
 }
 
 void fdpool_add_fd(FdPool *self, const int fd, enum FdDataType type) {
-  assert(fd < POOL_FD_SETSIZE);
+  DZ_ASSERT(fd < POOL_FD_SETSIZE, "Socket FD too big");
   fcntl(fd, F_SETFD, O_NONBLOCK);
   FD_SET(fd, &self->read_set);
   FdData *fd_data = &self->fd_data[fd];
@@ -55,11 +54,13 @@ enum FdDataType fdpool_get_fd_type(FdPool *self, int fd) {
 
 void fdpool_set_file_data(FdPool *self, int fd_to_read,
                           FdDataFile file_data) {
-  assert(self->fd_data[fd_to_read].data_type == FdDataType_FILE);
+  const bool is_file_data_type = self->fd_data[fd_to_read].data_type == FdDataType_FILE;
+  DZ_ASSERT(is_file_data_type, "Cannot set file data for file descriptor which is not FdDataType_FILE");
   self->fd_data[fd_to_read].fdDataFile = file_data;
 }
 
 FdDataFile fdpool_get_file_data(FdPool *self, int fd_to_read) {
-  assert(self->fd_data[fd_to_read].data_type == FdDataType_FILE);
+  const bool is_file_data_type = self->fd_data[fd_to_read].data_type == FdDataType_FILE;
+  DZ_ASSERT(is_file_data_type, "Cannot get file data from file descriptor which is not FdDataType_FILE");
   return self->fd_data[fd_to_read].fdDataFile;
 }

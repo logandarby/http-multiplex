@@ -45,7 +45,7 @@ void *dz_arena_alloc(DZArena *arena, const size_t n_bytes) {
   void *address = arena->data + arena->first_empty_byte;
   arena->first_empty_byte += n_bytes;
   if (arena->first_empty_byte > arena->max_size) {
-    dz_assert_msg(false, "Alloc too big for arena\n");
+    DZ_ASSERT(arena->first_empty_byte > arena->max_size, "Allocation to big for arena");
     arena->error = DzArenaError_ALLOC;
     return NULL;
   }

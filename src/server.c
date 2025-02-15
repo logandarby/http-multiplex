@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core.h"
+
 const int LISTEN_BACKLOG = 64;
 
 Server server_create(const int port) {
@@ -27,9 +29,9 @@ Server server_create(const int port) {
   const int addr_err =
       getaddrinfo(NULL, port_string, &hints, &results);
   if (addr_err || results == NULL) {
-    fprintf(
-        stderr,
-        "The specified port is not able to bind. Please try again\n");
+    DZ_ERROR(
+        "The specified port %d is not able to bind. Please try again",
+        port);
     error = true;
     goto cleanup;
   }
@@ -54,22 +56,20 @@ Server server_create(const int port) {
   }
 
   if (socketfd == -1) {
-    fprintf(stderr,
-            "Could not bind to port %d, please try another, or "
-            "verify that "
-            "this port isn't already running.\n",
-            port);
+    DZ_ERRORNO(
+        "Could not bind to port %d. Please try another, or verify "
+        "that this port isn't already running.",
+        port);
     error = true;
     goto cleanup;
   }
   {
     const int listen_error = listen(socketfd, LISTEN_BACKLOG);
     if (listen_error) {
-      fprintf(stderr,
-              "Could not bind to port %d, please try another, or "
-              "verify that "
-              "this port isn't already running.\n",
-              port);
+      DZ_ERRORNO(
+          "Could not bind to port %d. Please try another, of verify "
+          "that this port isn't already running",
+          port);
       error = true;
       goto cleanup;
     }
