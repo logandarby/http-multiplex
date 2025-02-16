@@ -4,7 +4,7 @@
 #include "file_module.h"
 #include "interrupt.h"
 #include "start.h"
-#include "core.h"
+#include "dz_debug.h"
 
 static const unsigned int DEFAULT_TIMEOUT_MS = 10000;
 

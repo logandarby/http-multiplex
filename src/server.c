@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core.h"
+#include "dz_debug.h"
 
 const int LISTEN_BACKLOG = 64;
 

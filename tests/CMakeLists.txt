@@ -16,13 +16,9 @@ include(GoogleTest)
 
 # Add Tests
 
-add_executable(dz_arena_test dz_arena_test.cpp)
 add_executable(dz_server_spam dz_server_spam.cpp)
 # gtest_discover_tests(tests)
-target_include_directories(dz_arena_test PRIVATE "../src")
 target_include_directories(dz_server_spam PRIVATE "../src")
-target_link_libraries(dz_arena_test PRIVATE GTest::GTest DZHttp_Lib)
 target_link_libraries(dz_server_spam PRIVATE GTest::GTest DZHttp_Lib)
 
-add_test(dz_arena_test_gtest dz_arena_test)
 add_test(dz_server_spam_gtest dz_server_spam)

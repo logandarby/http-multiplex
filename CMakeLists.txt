@@ -21,13 +21,17 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     )
 endif()
 
-# Add Tests
+# Add Libraries
 
+add_subdirectory(extern/dz_lib)
+
+# Add Tests
 enable_testing()
 add_subdirectory(tests)
 
 # Final Link
 add_library("${CMAKE_PROJECT_NAME}_Lib" STATIC ${MY_SOURCES})
+target_link_libraries(${CMAKE_PROJECT_NAME}_Lib DZ)
 
 # External Libraries
 target_sources("${CMAKE_PROJECT_NAME}" PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c")

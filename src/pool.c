@@ -4,7 +4,7 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include "core.h"
+#include "dz_debug.h"
 
 void fdpool_init(FdPool *self, const int socket_fd, const FileModule *file_module) {
   DZ_ASSERT(socket_fd < POOL_FD_SETSIZE, "Socket FD too big");

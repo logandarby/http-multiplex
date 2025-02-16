@@ -1,0 +1,3 @@
+[submodule "extern/dz_lib"]
+	path = extern/dz_lib
+	url = git@github.com:logandarby/dz_lib.git

@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "arena.h"
-#include "core.h"
+#include "dz_arena.h"
+#include "dz_debug.h"
 #include "pool.h"
 #include "server.h"
 

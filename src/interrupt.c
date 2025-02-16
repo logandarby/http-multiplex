@@ -1,6 +1,6 @@
 #include "interrupt.h"
 
-#include "core.h"
+#include "dz_debug.h"
 
 volatile sig_atomic_t is_running = 1;
 static volatile sig_atomic_t interrupt_in_progress = 0;
