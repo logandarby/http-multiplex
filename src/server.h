@@ -1,7 +1,5 @@
 #pragma once
 
-#include "core.h"
-
 typedef struct {
   int fd;    // File descriptor for the server object
   int port;  // Port of the server that is listening

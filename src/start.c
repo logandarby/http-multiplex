@@ -7,8 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 #include "arena.h"
 #include "core.h"
@@ -57,7 +55,7 @@ static char *construct_http_response(DZArena *arena,
 
 int start(const int port, const char *resources_path,
           volatile sig_atomic_t *is_running,
-          const unsigned int timeout) {
+          const unsigned int timeout, const FileModule *file_module) {
   DZArena arena = dz_arena_init(0);
   if (arena.error) {
     DZ_ERRORNO("Arena could not malloc");
@@ -69,7 +67,7 @@ int start(const int port, const char *resources_path,
           server.port);
 
   FdPool fdpool;
-  fdpool_init(&fdpool, server.fd);
+  fdpool_init(&fdpool, server.fd, NULL);
 
   while (*is_running) {
     int nready = fdpool_select_ready(&fdpool, timeout);
@@ -102,7 +100,7 @@ int start(const int port, const char *resources_path,
       } else if (fd_type == FdDataType_CLIENT) {
         const int client_fd = i;
         // Recieve data from a file descriptor (a client descriptor)
-        recv(client_fd, buffer, BUFFER_SIZE, 0);
+        file_module->recv(client_fd, buffer, BUFFER_SIZE, 0);
         buffer[BUFFER_SIZE] = '\0';  // Safety!
         const char *method = strtok(buffer, HTTP_SPACE_DELIMITER);
         if (!method) {
@@ -118,9 +116,9 @@ int start(const int port, const char *resources_path,
             goto close_client_connection;
           }
           DZ_INFO("Getting file %s", full_file_name);
-          const int fd_to_read = open(full_file_name, O_RDONLY);
+          const int fd_to_read = file_module->open(full_file_name, O_RDONLY);
           if (fd_to_read == -1) {
-            write(client_fd, NOT_FOUND_ERR, strlen(NOT_FOUND_ERR));
+            file_module->write(client_fd, NOT_FOUND_ERR, strlen(NOT_FOUND_ERR));
             DZ_WARNNO("Could not find file %s", full_file_name);
             goto close_client_connection;
           }
@@ -134,37 +132,37 @@ int start(const int port, const char *resources_path,
       close_client_connection:
         // Only get here if client conneciton must close
         fdpool_remove_fd(&fdpool, client_fd);
-        close(client_fd);
+        file_module->close(client_fd);
       } else if (fd_type == FdDataType_FILE) {
         // Send file to a client
         const int file_fd = i;
         const FdDataFile file_data =
             fdpool_get_file_data(&fdpool, file_fd);
         const int client_fd = file_data.client_fd_to_send;
-        const size_t bytes_read = read(file_fd, buffer, BUFFER_SIZE);
+        const size_t bytes_read = file_module->read(file_fd, buffer, BUFFER_SIZE);
         if (bytes_read < 0) {
           DZ_ERRORNO("Error with read()");
-          write(client_fd, NOT_FOUND_ERR, strlen(NOT_FOUND_ERR));
+          file_module->write(client_fd, NOT_FOUND_ERR, strlen(NOT_FOUND_ERR));
           goto close_file_client_conn;
         }
         {
           const char *http_response = construct_http_response(
               &arena, buffer, bytes_read, "text/html");
           const int n_written =
-              write(client_fd, http_response, strlen(http_response));
+              file_module->write(client_fd, http_response, strlen(http_response));
           if (n_written < 0) {
             char filepath[PATH_MAX];
             DZ_ERRORNO("Could not write() file to client %d",
                        client_fd);
-            write(client_fd, NOT_FOUND_ERR, strlen(NOT_FOUND_ERR));
+           file_module->write(client_fd, NOT_FOUND_ERR, strlen(NOT_FOUND_ERR));
             goto close_file_client_conn;
           }
         }
       close_file_client_conn:
         fdpool_remove_fd(&fdpool, client_fd);
         fdpool_remove_fd(&fdpool, file_fd);
-        close(client_fd);
-        close(file_fd);
+        file_module->close(client_fd);
+        file_module->close(file_fd);
       }
     }
     dz_arena_clear(&arena);
@@ -182,7 +180,7 @@ int start(const int port, const char *resources_path,
       case FdDataType_CLIENT:
       case FdDataType_FILE:
       case FdDataType_SERVER:
-        close(i);
+        file_module->close(i);
         break;
       case FdDataType_COUNT:
         break;

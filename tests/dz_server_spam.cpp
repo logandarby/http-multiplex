@@ -1,3 +1,4 @@
+#include "file_module.h"
 #include <cstdlib>
 #include <errno.h>
 #include <gtest/gtest.h>
@@ -21,7 +22,7 @@ static const short PORT = 8083;
 
 // Sleep for 1 second, then kill the test
 void *server_handle(void *data) {
-  start(PORT, RESOURCES_PATH, &is_running, 100);
+  start(PORT, RESOURCES_PATH, &is_running, 100, &SYS_FILE_MODULE);
   return NULL;
 }
 
@@ -87,7 +88,8 @@ bool client_spam(void *_) {
     }
     if (0 !=
         strncmp(buffer, EXPECTED_RESPONSE_HEADER, EXPECTED_RES_HEADER_LEN)) {
-      fprintf(stderr, "Not equal.\nExpected Result %s\nActual result %s\n\n\n", EXPECTED_RESPONSE_HEADER, buffer);
+      fprintf(stderr, "Not equal.\nExpected Result %s\nActual result %s\n\n\n",
+              EXPECTED_RESPONSE_HEADER, buffer);
       return false;
     }
     close(socket_fd);

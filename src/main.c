@@ -1,6 +1,7 @@
 #include <stdlib.h>
 
 #include "arguments.h"
+#include "file_module.h"
 #include "interrupt.h"
 #include "start.h"
 #include "core.h"
@@ -18,5 +19,5 @@ int main(const int argc, const char **argv) {
   signal(SIGINT, interrupt_signal_handler);
 #endif
   return start(args.port, RESOURCES_PATH, &is_running,
-               DEFAULT_TIMEOUT_MS);
+               DEFAULT_TIMEOUT_MS, &SYS_FILE_MODULE);
 }

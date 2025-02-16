@@ -12,7 +12,7 @@
 
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
 #ifdef _DEBUG
 #define DZ_ENABLE_ASSERTS

@@ -3,15 +3,15 @@
 #include <bits/types/struct_timeval.h>
 #include <fcntl.h>
 #include <string.h>
-#include <sys/select.h>
 
 #include "core.h"
 
-void fdpool_init(FdPool *self, const int socket_fd) {
+void fdpool_init(FdPool *self, const int socket_fd, const FileModule *file_module) {
   DZ_ASSERT(socket_fd < POOL_FD_SETSIZE, "Socket FD too big");
   memset(self, 0, sizeof(FdPool));
   self->socket_fd = socket_fd;
   self->maxfd = socket_fd;
+  self->file_module = (file_module) ? file_module : &SYS_FILE_MODULE;
   FD_ZERO(&self->read_set);
   FD_ZERO(&self->select_ready_set);
   fdpool_add_fd(self, socket_fd, FdDataType_SERVER);
@@ -38,10 +38,11 @@ void fdpool_remove_fd(FdPool *self, const int fd) {
 
 int fdpool_select_ready(FdPool *self, unsigned int timeout) {
   DZ_ASSERT(self);
+  DZ_ASSERT(sizeof(self->select_ready_set) == sizeof(self->read_set));
   memcpy(&self->select_ready_set, &self->read_set,
          sizeof(self->read_set));
   struct timeval time = {.tv_usec = timeout};
-  self->nready = select(self->maxfd + 1, &self->select_ready_set,
+  self->nready = self->file_module->select(self->maxfd + 1, &self->select_ready_set,
                         NULL, NULL, &time);
   return self->nready;
 }

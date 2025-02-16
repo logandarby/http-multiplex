@@ -1,7 +1,8 @@
 #pragma once
 
 #include <stdbool.h>
-#include <sys/select.h>
+
+#include "file_module.h"
 
 #define POOL_FD_SETSIZE FD_SETSIZE
 
@@ -34,9 +35,16 @@ typedef struct {
   int maxfd;                // Maximum value of fds in read_set
   int nready;  // Number of ready file descriptors from select
   FdData fd_data[POOL_FD_SETSIZE];  // Data for client with i-th fd
+  const FileModule *file_module;    // For IO Operations
 } FdPool;
 
-void fdpool_init(FdPool *self, const int socket_fd);
+// Initialize an FdPool.
+// Arguments:
+//  socket_fd: Socket file descriptor to initialize with
+//  file_module: pointer to a test filemodule. If NULL, uses the
+//  system default
+void fdpool_init(FdPool *self, const int socket_fd,
+                 const FileModule *file_module);
 
 void fdpool_add_fd(FdPool *self, int fd, enum FdDataType);
 
