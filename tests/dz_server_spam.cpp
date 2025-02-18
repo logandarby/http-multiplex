@@ -77,7 +77,6 @@ bool client_spam(void *_) {
         send(socket_fd, REQUEST_TO_SEND, strlen(REQUEST_TO_SEND), 0) < 0;
     if (sent_err == -1) {
       fprintf(stderr, "Bad send. errno %d\n", errno);
-      sleep(1);
       return false;
     }
     int result = recv(socket_fd, buffer, sizeof(buffer), 0);
