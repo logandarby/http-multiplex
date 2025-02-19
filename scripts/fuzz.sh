@@ -12,6 +12,6 @@ Connection: keep-alive
 EOM
 
 while true; do
-  echo "$VAR" | radamsa | nc localhost $1 -w 10
+  echo "$VAR" | radamsa | nc localhost $1 -w 10 > /dev/null
 done
 

@@ -1,9 +1,9 @@
 #include "pool.h"
 
 #include <bits/types/struct_timeval.h>
-#include <sys/resource.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/resource.h>
 
 #include "dz_debug.h"
 #include "dz_hashmap.h"
@@ -25,7 +25,8 @@ void fdpool_init(FdPool *self, const int socket_fd,
   const int limit_err = getrlimit(RLIMIT_NOFILE, &rlim);
   DZ_ASSERT(limit_err != -1);
   self->fd_limit = rlim.rlim_max;
-  self->poll_fd_array = (struct pollfd *)malloc(rlim.rlim_max * sizeof(struct pollfd));
+  self->poll_fd_array =
+      (struct pollfd *)malloc(rlim.rlim_max * sizeof(struct pollfd));
   for (size_t i = 0; i < rlim.rlim_max; i++) {
     self->poll_fd_array[i].fd = -1;
   }
@@ -47,12 +48,12 @@ void fdpool_free(FdPool *self) {
 
 int fdpool_select_ready(FdPool *self, unsigned int timeout) {
   DZ_ASSERT(self);
-  DZ_TRACE("Selecting");
-  return self->file_module->poll(self->poll_fd_array, self->max_fd + 1,
-              timeout ? timeout : -1);
+  return self->file_module->poll(
+      self->poll_fd_array, self->max_fd + 1, timeout ? timeout : -1);
 }
 
-void fdpool_add_fd_with_data(FdPool *self, const size_t fd, const FdData *data) {
+void fdpool_add_fd_with_data(FdPool *self, const size_t fd,
+                             const FdData *data) {
   DZ_ASSERT(self, "Caller must supply an FdPool");
   if (fd >= self->fd_limit) {
     DZ_ERROR("FD supplied is larger than the limit");
@@ -69,7 +70,8 @@ void fdpool_add_fd_with_data(FdPool *self, const size_t fd, const FdData *data) 
   // Must keep these two arrays in sync always
   self->poll_fd_array[fd] = event_info;
   DzHmError hm_error = 0;
-  hm_add(self->fd_data, &fd, sizeof(fd), data, sizeof(*data), &hm_error);
+  hm_add(self->fd_data, &fd, sizeof(fd), data, sizeof(*data),
+         &hm_error);
   DZ_ASSERT(!hm_error);
   self->max_fd = max(self->max_fd, fd);
 }
@@ -87,31 +89,36 @@ size_t fdpool_size(const FdPool *self) {
   return hm_count(self->fd_data);
 }
 
- bool fdpool_is_fd_ready(const FdPool *self,
-                               const size_t fd) {
-  DZ_ASSERT(fd < self->fd_limit, "Index is too big: Index should be less than the max FD limit set by the system");
+bool fdpool_is_fd_ready(const FdPool *self, const size_t fd) {
+  DZ_ASSERT(fd < self->fd_limit,
+            "Index is too big: Index should be less than the max FD "
+            "limit set by the system");
   if (fd >= self->fd_limit) {
     return false;
   }
   return self->poll_fd_array[fd].revents > 0;
 }
 
- void fdpool_set_file_data(FdPool *self, size_t fd,
-                                 const FdDataFile fd_data_file) {
+void fdpool_set_file_data(FdPool *self, size_t fd,
+                          const FdDataFile fd_data_file) {
   DZ_ASSERT(self, "Caller must supply an FDPool");
-  DZ_ASSERT(fd < self->fd_limit, "Index is too big: Index should be less than the max FD limit set by the system");
+  DZ_ASSERT(fd < self->fd_limit,
+            "Index is too big: Index should be less than the max FD "
+            "limit set by the system");
   if (!self || fd >= self->fd_limit) {
     return;
   }
   DzHmError hm_error = 0;
-  hm_add(self->fd_data, &fd, sizeof(fd), &fd_data_file, sizeof(fd_data_file), &hm_error);
+  hm_add(self->fd_data, &fd, sizeof(fd), &fd_data_file,
+         sizeof(fd_data_file), &hm_error);
   DZ_ASSERT(!hm_error);
 }
 
 FdTotalInfo fdpool_get_data(FdPool *self, size_t fd) {
   DZ_ASSERT(self, "Caller must supply FdPool");
   DZ_ASSERT(fd < self->fd_limit, "Index too big");
-  if (!self || fd >= self->fd_limit || self->poll_fd_array[fd].fd == -1) {
+  if (!self || fd >= self->fd_limit ||
+      self->poll_fd_array[fd].fd == -1) {
     static const FdTotalInfo bad_return_val = {
         .data = NULL,
         .event_info = NULL,
@@ -127,11 +134,12 @@ FdTotalInfo fdpool_get_data(FdPool *self, size_t fd) {
 void fdpool_remove_fd(FdPool *self, const size_t fd) {
   // TODO: Update maxfd
   DZ_ASSERT(self, "Caller must supply an FdPool");
-  DZ_ASSERT(fd < self->fd_limit, "Index is too big: Index should be less than the max FD limit set by the system");
+  DZ_ASSERT(fd < self->fd_limit,
+            "Index is too big: Index should be less than the max FD "
+            "limit set by the system");
   if (!self || fd >= self->fd_limit) {
     return;
   }
   hm_delete(self->fd_data, &fd, sizeof(fd));
   self->poll_fd_array[fd].fd = -1;
 }
-

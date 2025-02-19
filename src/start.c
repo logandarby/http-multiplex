@@ -3,15 +3,16 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/limits.h>
+#include <poll.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <poll.h>
 #include <sys/poll.h>
 
 #include "dz_arena.h"
 #include "dz_debug.h"
+#include "dz_hashmap.h"
 #include "file_module.h"
 #include "pool.h"
 #include "server.h"
@@ -91,7 +92,8 @@ int start(const int port, const char *resources_path,
       const enum FdDataType fd_type = fd_total_info.data->data_type;
       if (fd_type == FdDataType_SERVER) {
         // Accept a new client connection and add it to the pool
-        const int client_fd = file_module->accept(server.fd, NULL, NULL);
+        const int client_fd =
+            file_module->accept(server.fd, NULL, NULL);
         if (client_fd == -1) {
           if (errno != EWOULDBLOCK) {
             break;
@@ -122,20 +124,19 @@ int start(const int port, const char *resources_path,
             goto close_client_connection;
           }
           DZ_INFO("Getting file %s", full_file_name);
-          const int fd_to_read = file_module->open(full_file_name, O_RDONLY);
+          const int fd_to_read =
+              file_module->open(full_file_name, O_RDONLY);
           if (fd_to_read == -1) {
-            file_module->write(client_fd, NOT_FOUND_ERR, strlen(NOT_FOUND_ERR));
+            file_module->write(client_fd, NOT_FOUND_ERR,
+                               strlen(NOT_FOUND_ERR));
             DZ_WARNNO("Could not find file %s", full_file_name);
             goto close_client_connection;
           }
           // Set data for FD to read, so select can wait
-          const FdDataFile file_data = {
-            .client_fd_to_send = client_fd
-          };
-          const FdData data = {
-            .data_type = FdDataType_FILE,
-            .fd_data_file = file_data
-          };
+          const FdDataFile file_data = {.client_fd_to_send =
+                                            client_fd};
+          const FdData data = {.data_type = FdDataType_FILE,
+                               .fd_data_file = file_data};
           DZ_TRACE("Adding file fd %d", fd_to_read);
 
           fdpool_add_fd_with_data(&fdpool, fd_to_read, &data);
@@ -150,30 +151,32 @@ int start(const int port, const char *resources_path,
         const int file_fd = current_fd;
         const FdDataFile file_data = fd_total_info.data->fd_data_file;
         const int client_fd = file_data.client_fd_to_send;
-        const size_t bytes_read = file_module->read(file_fd, buffer, BUFFER_SIZE);
+        const size_t bytes_read =
+            file_module->read(file_fd, buffer, BUFFER_SIZE);
         if (bytes_read < 0) {
           DZ_ERRORNO("Error with read()");
-          file_module->write(client_fd, NOT_FOUND_ERR, strlen(NOT_FOUND_ERR));
+          file_module->write(client_fd, NOT_FOUND_ERR,
+                             strlen(NOT_FOUND_ERR));
           goto close_file_client_conn;
         }
         {
           const char *http_response = construct_http_response(
               &arena, buffer, bytes_read, "text/html");
-          const int n_written =
-              file_module->write(client_fd, http_response, strlen(http_response));
-        DZ_TRACE("Sending %d file to client %d", i, client_fd);
+          const int n_written = file_module->write(
+              client_fd, http_response, strlen(http_response));
+          DZ_TRACE("Sending %d file to client %d", i, client_fd);
           if (n_written < 0) {
             char filepath[PATH_MAX];
-            DZ_ERRORNO("Could not write() file to client %d", client_fd);
-           file_module->write(client_fd, NOT_FOUND_ERR, strlen(NOT_FOUND_ERR));
+            DZ_ERRORNO("Could not write() file to client %d",
+                       client_fd);
+            file_module->write(client_fd, NOT_FOUND_ERR,
+                               strlen(NOT_FOUND_ERR));
             goto close_file_client_conn;
           }
         }
       close_file_client_conn:
-        DZ_TRACE("remove client fd");
         fdpool_remove_fd(&fdpool, client_fd);
-        DZ_TRACE("remove file fd");
-        fdpool_remove_fd(&fdpool, i); // Get rid of file fd
+        fdpool_remove_fd(&fdpool, i);  // Get rid of file fd
         file_module->close(client_fd);
         file_module->close(file_fd);
       }
@@ -195,12 +198,13 @@ int start(const int port, const char *resources_path,
       case FdDataType_FILE:
       case FdDataType_SERVER:
         file_module->close(current_fd);
-        DZ_TRACE("Closing fd %d", current_fd);
+        fdpool_remove_fd(&fdpool, current_fd);
         break;
       case FdDataType_COUNT:
         break;
     }
   }
+  DZ_ASSERT(fdpool_size(&fdpool) == 0);
   fdpool_free(&fdpool);
   return EXIT_SUCCESS;
 }

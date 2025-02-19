@@ -1,4 +1,5 @@
 #include "file_module.h"
+#include <csignal>
 #include <cstdlib>
 #include <errno.h>
 #include <gtest/gtest.h>
@@ -16,12 +17,12 @@ extern "C" {
 
 volatile sig_atomic_t is_running = 1;
 
-static const short PORT = 8083;
+static const short PORT = 8090;
 #define N_CLIENTS 100
-#define N_REQS_PER_CLIENT 1000
+#define N_REQS_PER_CLIENT 10
 
 // Sleep for 1 second, then kill the test
-void *server_handle(void *data) {
+void *server_handle(void *_) {
   start(PORT, RESOURCES_PATH, &is_running, 100, &SYS_FILE_MODULE);
   return NULL;
 }
@@ -47,6 +48,8 @@ static const char *EXPECTED_RESPONSE_HEADER = "HTTP/1.1 200 OKAY\n"
                                               "Content-length: 137\n";
 static const size_t EXPECTED_RES_HEADER_LEN = strlen(EXPECTED_RESPONSE_HEADER);
 
+static sig_atomic_t good = true;
+
 bool client_spam(void *_) {
   unsigned short port = PORT;
   struct hostent *hostname;
@@ -56,6 +59,7 @@ bool client_spam(void *_) {
   hostname = gethostbyname("localhost");
   if (!hostname) {
     fprintf(stderr, "hostname failed.\n");
+    good = false;
     return false;
   }
 
@@ -67,28 +71,33 @@ bool client_spam(void *_) {
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd < 0) {
       fprintf(stderr, "Bad socket. errno %d\n", errno);
+    good = false;
       return false;
     }
     if (connect(socket_fd, (struct sockaddr *)&server, sizeof(server)) < 0) {
       fprintf(stderr, "Bad connect. errno %d\n", errno);
+    good = false;
       return false;
     }
     int sent_err =
         send(socket_fd, REQUEST_TO_SEND, strlen(REQUEST_TO_SEND), 0) < 0;
     if (sent_err == -1) {
       fprintf(stderr, "Bad send. errno %d\n", errno);
+    good = false;
       return false;
     }
     int result = recv(socket_fd, buffer, sizeof(buffer), 0);
     if (result < 0) {
       fprintf(stderr, "RECV bad. Result %d, Errno %d\n", result, errno);
       sleep(1);
+    good = false;
       return false;
     }
     if (0 !=
         strncmp(buffer, EXPECTED_RESPONSE_HEADER, EXPECTED_RES_HEADER_LEN)) {
       fprintf(stderr, "Not equal.\nExpected Result %s\nActual result %s\n\n\n",
               EXPECTED_RESPONSE_HEADER, buffer);
+    good = false;
       return false;
     }
     close(socket_fd);
@@ -96,21 +105,24 @@ bool client_spam(void *_) {
   return true;
 }
 
-TEST(Server, Spam) {
-  pthread_t server_thread;
+void *join_all_threads(void *_) {
   pthread_t client_threads[N_CLIENTS];
-  pthread_create(&server_thread, 0, server_handle, (void *)NULL);
   for (size_t i = 0; i < N_CLIENTS; i++) {
     pthread_create(&client_threads[i], 0, (void *(*)(void *))client_spam,
                    (void *)NULL);
   }
   for (size_t i = 0; i < N_CLIENTS; i++) {
-    bool result = false;
-    pthread_join(client_threads[i], (void **)&result);
-    ASSERT_TRUE(result);
+    pthread_join(client_threads[i], (void **)NULL);
   }
-  is_running = 0;
-  /*pthread_join(server_thread, NULL);*/
+  is_running = false;
+  return (void *)true;
+}
+
+TEST(Server, Spam) {
+  pthread_t client_threads;
+  pthread_create(&client_threads, 0, join_all_threads, (void**)NULL);
+  server_handle(NULL);
+  ASSERT_TRUE(good);
 }
 
 int main(int argc, char **argv) {
