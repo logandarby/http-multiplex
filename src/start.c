@@ -9,11 +9,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/poll.h>
+#include <unistd.h>
 
 #include "dz_arena.h"
 #include "dz_debug.h"
-#include "dz_hashmap.h"
 #include "file_module.h"
+#include "lru_cache.h"
 #include "pool.h"
 #include "server.h"
 
@@ -23,6 +24,7 @@ static const char *HTTP_SPACE_DELIMITER = " ";
 static const char *HTTP_LINE_DELIMITER = "\n";
 
 #define BUFFER_SIZE 8192
+#define LRU_CACHE_CAPACITY 2
 
 static char *get_absolute_filename(const char *file_name,
                                    DZArena *arena,
@@ -65,6 +67,7 @@ int start(const int port, const char *resources_path,
     DZ_ERRORNO("Arena could not malloc");
     exit(EXIT_FAILURE);
   }
+  LRUCache cache = lru_init(LRU_CACHE_CAPACITY);
   static char *buffer = NULL;
   Server server = server_create(port);
   DZ_INFO("Accepting connections with fd %d on port %d", server.fd,
@@ -124,6 +127,15 @@ int start(const int port, const char *resources_path,
             goto close_client_connection;
           }
           DZ_INFO("Getting file %s", full_file_name);
+          // Try to get file from cache, if it doesn't exist, then we
+          // open it
+          const char *file_contents = lru_get(&cache, full_file_name);
+          if (file_contents) {
+            DZ_WARN("CACHE HIT On file %s", full_file_name);
+            file_module->send(client_fd, file_contents,
+                              strlen(file_contents), 0);
+            goto close_client_connection;
+          }
           const int fd_to_read =
               file_module->open(full_file_name, O_RDONLY);
           if (fd_to_read == -1) {
@@ -133,8 +145,11 @@ int start(const int port, const char *resources_path,
             goto close_client_connection;
           }
           // Set data for FD to read, so select can wait
-          const FdDataFile file_data = {.client_fd_to_send =
-                                            client_fd};
+          const FdDataFile file_data = {
+              .client_fd_to_send = client_fd,
+              // TODO: Preferably we don't wanna manage memory here,
+              // this is begging for a memory leak
+              .full_file_name = strdup(full_file_name)};
           const FdData data = {.data_type = FdDataType_FILE,
                                .fd_data_file = file_data};
           DZ_TRACE("Adding file fd %d", fd_to_read);
@@ -164,6 +179,8 @@ int start(const int port, const char *resources_path,
               &arena, buffer, bytes_read, "text/html");
           const int n_written = file_module->write(
               client_fd, http_response, strlen(http_response));
+          DZ_WARN("CACHE PUSH Filename %s", file_data.full_file_name);
+          lru_push(&cache, file_data.full_file_name, http_response);
           DZ_TRACE("Sending %d file to client %d", i, client_fd);
           if (n_written < 0) {
             char filepath[PATH_MAX];
@@ -175,6 +192,7 @@ int start(const int port, const char *resources_path,
           }
         }
       close_file_client_conn:
+        free(file_data.full_file_name);
         fdpool_remove_fd(&fdpool, client_fd);
         fdpool_remove_fd(&fdpool, i);  // Get rid of file fd
         file_module->close(client_fd);
@@ -186,6 +204,7 @@ int start(const int port, const char *resources_path,
   // Cleanup
   DZ_INFO("Exiting gracefully...");
   dz_arena_free(&arena);
+  lru_free(&cache);
   for (size_t i = 0; i < fdpool.max_fd; i++) {
     // Cleanup based on FD type
     FdTotalInfo fdinfo = fdpool_get_data(&fdpool, i);
@@ -196,6 +215,7 @@ int start(const int port, const char *resources_path,
     switch (fdinfo.data->data_type) {
       case FdDataType_CLIENT:
       case FdDataType_FILE:
+        free(fdinfo.data->fd_data_file.full_file_name);
       case FdDataType_SERVER:
         file_module->close(current_fd);
         fdpool_remove_fd(&fdpool, current_fd);

@@ -17,6 +17,7 @@ enum FdDataType {
 // file to
 typedef struct FdDataFile {
   int client_fd_to_send;
+  char *full_file_name;
 } FdDataFile;
 
 // Holds any info for use for a client interaction
